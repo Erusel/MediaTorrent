@@ -98,7 +98,7 @@ export class TorrentsService {
       mediaType: metadata?.mediaType || MediaType.MOVIE,
       uploadType: UploadType.TORRENT,
       status: MediaStatus.DOWNLOADING,
-      torrentHash: hash,
+      torrentHash: hash ?? undefined,
       uploadedById: userId,
       tmdbId: metadata?.tmdbId,
     });
@@ -119,7 +119,7 @@ export class TorrentsService {
     metadata?: { title?: string; mediaType?: MediaType; tmdbId?: number },
   ): Promise<any> {
     const formData = new FormData();
-    const blob = new Blob([fileBuffer]);
+    const blob = new Blob([new Uint8Array(fileBuffer)]);
     formData.append('torrents', blob, filename);
     formData.append('savepath', process.env.DOWNLOADS_PATH || '/downloads');
 

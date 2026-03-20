@@ -19,7 +19,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { TorrentsService } from './torrents.service';
-import { TmdbService } from './tmdb.service';
+import { TmdbService, TmdbResult } from './tmdb.service';
 import { MediaType } from '../media/media.entity';
 
 class AddMagnetDto {
@@ -115,7 +115,7 @@ export class TorrentsController {
   }
 
   @Get('tmdb/search')
-  searchTmdb(@Query('q') query: string) {
+  searchTmdb(@Query('q') query: string): Promise<TmdbResult[]> {
     return this.tmdbService.search(query);
   }
 }

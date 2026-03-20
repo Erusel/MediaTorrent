@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-interface TmdbResult {
+export interface TmdbResult {
   id: number;
   title: string;
   year: number;

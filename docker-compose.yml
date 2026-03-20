@@ -1,0 +1,111 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    networks:
+      - mediatorrent
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "${BACKEND_PORT:-3001}:3000"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3000
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-7d}
+      - BCRYPT_ROUNDS=${BCRYPT_ROUNDS:-12}
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - TMDB_API_KEY=${TMDB_API_KEY}
+      - QBITTORRENT_HOST=${QBITTORRENT_HOST:-qbittorrent}
+      - QBITTORRENT_PORT=${QBITTORRENT_PORT:-8080}
+      - QBITTORRENT_USERNAME=${QBITTORRENT_USERNAME:-admin}
+      - QBITTORRENT_PASSWORD=${QBITTORRENT_PASSWORD:-adminpassword}
+      - JELLYFIN_URL=${JELLYFIN_URL:-http://host.docker.internal:8096}
+      - JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
+      - MAX_FILE_SIZE_MB=${MAX_FILE_SIZE_MB:-50000}
+      - CHUNK_SIZE_MB=${CHUNK_SIZE_MB:-10}
+      - ALLOWED_VIDEO_EXTENSIONS=${ALLOWED_VIDEO_EXTENSIONS}
+      - ALLOWED_SUBTITLE_EXTENSIONS=${ALLOWED_SUBTITLE_EXTENSIONS}
+      - MOVIES_PATH=${MOVIES_PATH:-/media/movies}
+      - TV_PATH=${TV_PATH:-/media/tv}
+      - DOWNLOADS_PATH=${DOWNLOADS_PATH:-/downloads}
+      - UPLOADS_TEMP_PATH=${UPLOADS_TEMP_PATH:-/uploads/temp}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@mediatorrent.local}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+    volumes:
+      - media_movies:/media/movies
+      - media_tv:/media/tv
+      - downloads:/downloads
+      - uploads_temp:/uploads/temp
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qbittorrent:
+        condition: service_started
+    networks:
+      - mediatorrent
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-mediatorrent}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB:-mediatorrent}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - mediatorrent
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mediatorrent}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-UTC}
+      - WEBUI_PORT=8080
+    volumes:
+      - qbittorrent_config:/config
+      - downloads:/downloads
+    ports:
+      - "6881:6881"
+      - "6881:6881/udp"
+    networks:
+      - mediatorrent
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  qbittorrent_config:
+  media_movies:
+  media_tv:
+  downloads:
+  uploads_temp:
+
+networks:
+  mediatorrent:
+    driver: bridge
